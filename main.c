@@ -153,7 +153,13 @@ int main() {
     // Print the file names
     printf("Files in the current directory:\n");
     for (size_t i = 0; i < count; i++) {
-        printf("%s\n", files[i]);
+        printf("\n ============================= \n %s\n ============================= \n", files[i]);
+        char *content = read_file_content(files[i]);
+        if (content) {
+            printf("\n%s\n", content);
+            free(content);
+        }
+
     }
 
     // Free the allocated memory
