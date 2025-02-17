@@ -59,22 +59,108 @@ char* read_file_content(const char *filename) {
 
     return buffer;
 }
+#include <stdio.h>
+#include <stdlib.h>
+#include <dirent.h>
+#include <string.h>
+
+// Function to get all file names in the current directory
+char** get_files_in_current_dir(size_t *count) {
+    DIR *dir;
+    struct dirent *entry;
+    size_t capacity = 10; // Initial capacity for the array
+    size_t size = 0;      // Current number of files
+    char **files = malloc(capacity * sizeof(char *));
+
+    if (!files) {
+        perror("Failed to allocate memory");
+        return NULL;
+    }
+
+    // Open the current directory
+    dir = opendir(".");
+    if (!dir) {
+        perror("Failed to open directory");
+        free(files);
+        return NULL;
+    }
+
+    // Read directory entries
+    while ((entry = readdir(dir)) != NULL) {
+        // Skip "." and ".." entries
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+
+        // Resize the array if necessary
+        if (size >= capacity) {
+            capacity *= 2;
+            char **new_files = realloc(files, capacity * sizeof(char *));
+            if (!new_files) {
+                perror("Failed to reallocate memory");
+                closedir(dir);
+                for (size_t i = 0; i < size; i++) {
+                    free(files[i]);
+                }
+                free(files);
+                return NULL;
+            }
+            files = new_files;
+        }
+
+        // Allocate memory for the file name and copy it
+        files[size] = strdup(entry->d_name);
+        if (!files[size]) {
+            perror("Failed to allocate memory for file name");
+            closedir(dir);
+            for (size_t i = 0; i < size; i++) {
+                free(files[i]);
+            }
+            free(files);
+            return NULL;
+        }
+
+        size++;
+    }
+
+    // Close the directory
+    closedir(dir);
+
+    // Resize the array to the exact number of files
+    char **result = realloc(files, size * sizeof(char *));
+    if (!result && size > 0) {
+        perror("Failed to reallocate memory");
+        for (size_t i = 0; i < size; i++) {
+            free(files[i]);
+        }
+        free(files);
+        return NULL;
+    }
+
+    *count = size;
+    return result;
+}
 
 int main() {
-    const char *filename = "story.txt";
+    size_t count;
+    char **files = get_files_in_current_dir(&count);
 
-    // Read the file content
-    char *file_content = read_file_content(filename);
-    if (!file_content) {
-        fprintf(stderr, "Failed to read file content\n");
+    if (!files) {
+        fprintf(stderr, "Failed to get files in the current directory\n");
         return 1;
     }
 
-    // Print the file content (for demonstration)
-    printf("File content:\n%s\n", file_content);
+    // Print the file names
+    printf("Files in the current directory:\n");
+    for (size_t i = 0; i < count; i++) {
+        printf("%s\n", files[i]);
+    }
 
-    // Free the allocated buffer
-    free(file_content);
+    // Free the allocated memory
+    for (size_t i = 0; i < count; i++) {
+        free(files[i]);
+    }
+    free(files);
 
     return 0;
 }
